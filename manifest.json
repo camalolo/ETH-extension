@@ -12,7 +12,7 @@
     "default_icon": "icon48.png",
     "default_title": "Ethereum Fees"
   },
-  "permissions": ["storage", "alarms", "action"],
+  "permissions": ["storage", "alarms"],
   "host_permissions": ["https://ethgasprice.org/*"],
   "background": {
     "service_worker": "background.js"
