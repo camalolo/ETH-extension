@@ -33,7 +33,7 @@ function fetchEthGasPrice(forceUpdate = false) {
 
     if ((now - lastUpdate > 5 * 60 * 1000) || forceUpdate) { // Update every 5 minutes
       console.log('Fetching new gas price from API');
-      fetch('https://ethgasprice.org/api/gas')
+      fetch('https://api.blocknative.com/gasprices/blockprices?chainid=1')
         .then(response => {
           console.log('API response status:', response.status);
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -41,9 +41,21 @@ function fetchEthGasPrice(forceUpdate = false) {
         })
         .then(data => {
           console.log('API response data:', data);
-          if (data.code !== 200) throw new Error('API error: ' + data.code);
-          const newGas = data.data.slow; // Gas price in Gwei for slow confirmation
-          console.log('New gas price (slow):', newGas);
+          const blockPrices = data.blockPrices;
+          if (!blockPrices || blockPrices.length === 0) {
+            throw new Error('No block prices found in API response');
+          }
+          const estimatedPrices = blockPrices[0].estimatedPrices;
+          if (!estimatedPrices || estimatedPrices.length === 0) {
+            throw new Error('No estimated prices found in API response');
+          }
+          const price95 = estimatedPrices.find(price => price.confidence === 95);
+          if (!price95) {
+            throw new Error('Could not retrieve gas price with 95% confidence');
+          }
+          const newGas = price95.price;
+
+          console.log('New gas price (95% confidence):', newGas);
           chrome.storage.local.set({ gas: newGas, lastUpdate: now }, () => {
             console.log('Gas price and lastUpdate saved to storage');
           });
