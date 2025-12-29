@@ -6,9 +6,9 @@ function updateBadge(gasText) {
     if (gasText === 'Error') {
       shortGas = 'Err';
     } else {
-      const numGas = parseFloat(gasText);
+      const numberGas = Number.parseFloat(gasText);
       // One-liner: Format based on magnitude, max 4 chars
-      shortGas = numGas.toFixed(numGas >= 100 ? 0 : numGas >= 10 ? 1 : 2).slice(0, 4);
+      shortGas = numberGas.toFixed(numberGas >= 100 ? 0 : (numberGas >= 10 ? 1 : 2)).slice(0, 4);
     }
 
     chrome.action.setBadgeText({ text: shortGas });
@@ -65,7 +65,7 @@ function fetchEthGasPrice(forceUpdate = false) {
           console.error('Fetch error:', error);
           if (error instanceof TypeError) {
             console.error('Failed to fetch. Retrying in 30 seconds');
-            setTimeout(fetchEthGasPrice, 30000);
+            setTimeout(fetchEthGasPrice, 30_000);
           } else {
             updateBadge('Error');
           }
