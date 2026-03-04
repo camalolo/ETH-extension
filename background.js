@@ -21,58 +21,61 @@ function updateBadge(gasText) {
   }
 }
 
-// Function to fetch Ethereum gas price and update badge
-function fetchEthGasPrice(forceUpdate = false) {
+async function fetchWithRetry(url, options = {}, maxRetries = 6, baseDelay = 1000) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response;
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+      await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt - 1)));
+    }
+  }
+}
+
+async function fetchEthGasPrice(forceUpdate = false) {
   console.log('fetchEthGasPrice called');
-  chrome.storage.local.get(['gas', 'lastUpdate'], (result) => {
+  chrome.storage.local.get(['gas', 'lastUpdate'], async (result) => {
     console.log('Storage data retrieved:', result);
     
     const now = Date.now();
     const lastUpdate = result.lastUpdate || 0;
     console.log('Current time:', now, 'Last update:', lastUpdate);
 
-    if ((now - lastUpdate > 5 * 60 * 1000) || forceUpdate) { // Update every 5 minutes
+    if ((now - lastUpdate > 5 * 60 * 1000) || forceUpdate) {
       console.log('Fetching new gas price from API');
-      fetch('https://api.blocknative.com/gasprices/blockprices?chainid=1')
-        .then(response => {
-          console.log('API response status:', response.status);
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          return response.json();
-        })
-        .then(data => {
-          console.log('API response data:', data);
-          const blockPrices = data.blockPrices;
-          if (!blockPrices || blockPrices.length === 0) {
-            throw new Error('No block prices found in API response');
-          }
-          const estimatedPrices = blockPrices[0].estimatedPrices;
-          if (!estimatedPrices || estimatedPrices.length === 0) {
-            throw new Error('No estimated prices found in API response');
-          }
-          const price95 = estimatedPrices.find(price => price.confidence === 95);
-          if (!price95) {
-            throw new Error('Could not retrieve gas price with 95% confidence');
-          }
-          const newGas = price95.price;
+      try {
+        const response = await fetchWithRetry('https://api.blocknative.com/gasprices/blockprices?chainid=1');
+        console.log('API response status:', response.status);
+        const data = await response.json();
+        console.log('API response data:', data);
+        const blockPrices = data.blockPrices;
+        if (!blockPrices || blockPrices.length === 0) {
+          throw new Error('No block prices found in API response');
+        }
+        const estimatedPrices = blockPrices[0].estimatedPrices;
+        if (!estimatedPrices || estimatedPrices.length === 0) {
+          throw new Error('No estimated prices found in API response');
+        }
+        const price95 = estimatedPrices.find(price => price.confidence === 95);
+        if (!price95) {
+          throw new Error('Could not retrieve gas price with 95% confidence');
+        }
+        const newGas = price95.price;
 
-          console.log('New gas price (95% confidence):', newGas);
-          chrome.storage.local.set({ gas: newGas, lastUpdate: now }, () => {
-            console.log('Gas price and lastUpdate saved to storage');
-          });
-          updateBadge(newGas);
-        })
-        .catch(error => {
-          console.error('Fetch error:', error);
-          if (error instanceof TypeError) {
-            console.error('Failed to fetch. Retrying in 30 seconds');
-            setTimeout(fetchEthGasPrice, 30_000);
-          } else {
-            updateBadge('Error');
-          }
+        console.log('New gas price (95% confidence):', newGas);
+        chrome.storage.local.set({ gas: newGas, lastUpdate: now }, () => {
+          console.log('Gas price and lastUpdate saved to storage');
         });
+        updateBadge(newGas);
+      } catch (error) {
+        console.error('Fetch error:', error);
+        updateBadge('Error');
+      }
     } else if (result.gas) {
       console.log('Using cached gas price:', result.gas);
-      updateBadge(result.gas); // Use cached gas price
+      updateBadge(result.gas);
     } else {
       console.log('No cached gas price available');
       updateBadge('Error');
