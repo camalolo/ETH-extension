@@ -1,3 +1,0 @@
-[submodule "release"]
-	path = release
-	url = https://github.com/camalolo/chrome-ext-release.git

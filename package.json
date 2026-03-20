@@ -4,10 +4,10 @@
   "description": "Release tools for Chrome extensions",
    "scripts": {
      "test": "echo \"Error: no test specified\" && exit 1",
-     "lint": "eslint --config release/config/eslint.config.mjs .",
-     "pack": "node release/scripts/pack.mjs",
-     "publish": "bash release/scripts/tag_release.sh"
-   },
+     "lint": "eslint --config ../release/config/eslint.config.mjs .",
+     "pack": "node ../release/scripts/pack.mjs .",
+     "publish": "bash ../release/scripts/tag_release.sh ."
+    },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/YOUR_USERNAME/YOUR_REPO.git"
