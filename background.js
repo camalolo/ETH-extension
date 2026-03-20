@@ -89,6 +89,18 @@ chrome.action.onClicked.addListener(() => {
   fetchEthGasPrice(true);
 });
 
+chrome.runtime.onStartup.addListener(() => {
+  console.log('Browser started, initializing Ethereum gas price fetch');
+  fetchEthGasPrice();
+});
+
+chrome.idle.onStateChanged.addListener((state) => {
+  if (state === 'active') {
+    console.log('System woke from idle, refreshing Ethereum gas price');
+    fetchEthGasPrice();
+  }
+});
+
 // Initial fetch when the extension loads
 console.log('Extension loaded, initiating first fetch');
 fetchEthGasPrice();
