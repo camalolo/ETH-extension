@@ -10,14 +10,14 @@
     },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR_USERNAME/YOUR_REPO.git"
+    "url": "git+https://github.com/camalolo/ETH-extension.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/YOUR_USERNAME/YOUR_REPO/issues"
+    "url": "https://github.com/camalolo/ETH-extension/issues"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/YOUR_REPO#readme",
+  "homepage": "https://github.com/camalolo/ETH-extension#readme",
   "devDependencies": {
     "@eslint/js": "^9.36.0",
     "baseline-browser-mapping": "^2.9.11",
