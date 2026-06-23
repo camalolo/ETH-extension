@@ -33,7 +33,7 @@ No options page, no popup, no content scripts.
 - **Badge-only display** — `updateBadge(gasText)` truncates to 4 chars max for badge readability.
 - **Exponential-backoff fetch** — `fetchWithRetry(url, opts, maxRetries=6, baseDelay=1000)` retries with doubling delay on network errors.
 - **Cache with TTL** — `fetchEthGasPrice(forceUpdate=false)` checks `chrome.storage.local` for a cached value with 5-minute TTL before hitting the API.
-- **API:** `GET https://api.blocknative.com/gasprices/blockprices?chainid=1` — extracts `blockPrices[0].estimatedPrices`, finds the 95% confidence price entry.
+- **API:** `GET https://api.etherscan.io/v2/api?chainid=1&module=gastracker&action=gasoracle` — works keyless (rate-limited to 1 req/5s); extracts `result.SafeGasPrice` (slow confirmation price in Gwei).
 - **Re-initialization** — `chrome.runtime.onStartup` + `chrome.idle.onStateChanged` listeners re-fetch after browser restart or wake from sleep, since service workers are lazy-loaded in MV3.
 - **Alarm** — `chrome.alarms` fires `'updateEthGasPrice'` every 5 minutes (shorter interval than other extensions due to gas price volatility).
 - **Storage keys in `chrome.storage.local`:** `ethGasPrice` (number), `ethGasPriceTimestamp` (epoch ms).

@@ -46,25 +46,16 @@ async function fetchEthGasPrice(forceUpdate = false) {
     if ((now - lastUpdate > 5 * 60 * 1000) || forceUpdate) {
       console.log('Fetching new gas price from API');
       try {
-        const response = await fetchWithRetry('https://api.blocknative.com/gasprices/blockprices?chainid=1');
+        const response = await fetchWithRetry('https://api.etherscan.io/v2/api?chainid=1&module=gastracker&action=gasoracle');
         console.log('API response status:', response.status);
         const data = await response.json();
         console.log('API response data:', data);
-        const blockPrices = data.blockPrices;
-        if (!blockPrices || blockPrices.length === 0) {
-          throw new Error('No block prices found in API response');
+        if (data.status !== '1' || !data.result) {
+          throw new Error('Etherscan API returned no data: ' + (data.message || 'unknown'));
         }
-        const estimatedPrices = blockPrices[0].estimatedPrices;
-        if (!estimatedPrices || estimatedPrices.length === 0) {
-          throw new Error('No estimated prices found in API response');
-        }
-        const price95 = estimatedPrices.find(price => price.confidence === 95);
-        if (!price95) {
-          throw new Error('Could not retrieve gas price with 95% confidence');
-        }
-        const newGas = price95.price;
+        const newGas = data.result.SafeGasPrice;
 
-        console.log('New gas price (95% confidence):', newGas);
+        console.log('New gas price (safe/slow):', newGas);
         chrome.storage.local.set({ gas: newGas, lastUpdate: now }, () => {
           console.log('Gas price and lastUpdate saved to storage');
         });
