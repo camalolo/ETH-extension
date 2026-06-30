@@ -63,6 +63,8 @@ async function fetchEthGasPrice(forceUpdate = false) {
       } catch (error) {
         console.error('Fetch error:', error);
         updateBadge('Error');
+        // Schedule a retry in 1 minute (one-shot alarm)
+        chrome.alarms.create('retryEthGasPrice', { delayInMinutes: 1 });
       }
     } else if (result.gas) {
       console.log('Using cached gas price:', result.gas);
@@ -103,5 +105,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   console.log('Alarm triggered:', alarm.name);
   if (alarm.name === 'updateEthGasPrice') {
     fetchEthGasPrice();
+  } else if (alarm.name === 'retryEthGasPrice') {
+    fetchEthGasPrice(true);
   }
 });
