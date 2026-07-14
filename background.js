@@ -21,17 +21,47 @@ function updateBadge(gasText) {
   }
 }
 
-async function fetchWithRetry(url, options = {}, maxRetries = 6, baseDelay = 1000) {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+// Public Ethereum RPC endpoints (tried in order for redundancy)
+const RPC_ENDPOINTS = [
+  'https://ethereum-rpc.publicnode.com',
+  'https://eth.llamarpc.com',
+  'https://rpc.ankr.com/eth',
+];
+
+// Fetch safe (slow-confirmation) gas price in Gwei via eth_feeHistory
+async function fetchGasPrice() {
+  const body = JSON.stringify({
+    jsonrpc: '2.0',
+    method: 'eth_feeHistory',
+    params: [4, 'latest', [25]],
+    id: 1,
+  });
+
+  for (const url of RPC_ENDPOINTS) {
     try {
-      const response = await fetch(url, options);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+      if (!response.ok) continue;
+      const data = await response.json();
+      if (!data.result || !data.result.baseFeePerGas || !data.result.reward) continue;
+
+      // Next block's base fee (last element in the array)
+      const fees = data.result.baseFeePerGas;
+      const baseFee = parseInt(fees[fees.length - 1], 16);
+      // Average 25th-percentile priority fee across returned blocks
+      const rewards = data.result.reward.map(r => parseInt(r[0], 16));
+      const avgReward = rewards.reduce((a, b) => a + b, 0) / rewards.length;
+
+      const gasGwei = (baseFee + avgReward) / 1e9;
+      if (gasGwei > 0) return gasGwei;
     } catch (error) {
-      if (attempt === maxRetries) throw error;
-      await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt - 1)));
+      console.warn(`RPC ${url} failed:`, error.message);
     }
   }
+  throw new Error('All RPC endpoints failed');
 }
 
 async function fetchEthGasPrice(forceUpdate = false) {
@@ -46,15 +76,7 @@ async function fetchEthGasPrice(forceUpdate = false) {
     if ((now - lastUpdate > 5 * 60 * 1000) || forceUpdate) {
       console.log('Fetching new gas price from API');
       try {
-        const response = await fetchWithRetry('https://api.etherscan.io/v2/api?chainid=1&module=gastracker&action=gasoracle');
-        console.log('API response status:', response.status);
-        const data = await response.json();
-        console.log('API response data:', data);
-        if (data.status !== '1' || !data.result) {
-          throw new Error('Etherscan API returned no data: ' + (data.message || 'unknown'));
-        }
-        const newGas = data.result.SafeGasPrice;
-
+        const newGas = await fetchGasPrice();
         console.log('New gas price (safe/slow):', newGas);
         chrome.storage.local.set({ gas: newGas, lastUpdate: now }, () => {
           console.log('Gas price and lastUpdate saved to storage');
